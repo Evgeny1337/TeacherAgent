@@ -52,6 +52,7 @@ class LessonInfoResponse(BaseModel):
     language_focus: list[str]
     based_on_materials: list[str]
     assumptions: list[str]
+    missing_info: list[str]
     clarifying_questions: list[str]
     readiness: Readiness | None
     confidence: float

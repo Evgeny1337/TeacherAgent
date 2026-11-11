@@ -15,7 +15,7 @@ Your job:
 - Use materials only as evidence
 - Do NOT write a full lesson plan with timed activities
 - Do NOT invent worksheet content that is not supported by materials
-- If information is missing, put null and ask clarifying questions
+- If information is missing, put null, list gaps in missing_info, and ask clarifying questions
 - If a material has little/no usable text, mention that in clarifying_questions
 
 Return ONLY valid json with these keys:
@@ -29,6 +29,7 @@ Return ONLY valid json with these keys:
   "language_focus": string[],
   "based_on_materials": string[],
   "assumptions": string[],
+  "missing_info": string[],
   "clarifying_questions": string[],
   "readiness": "ready"|"needs_clarification"|"insufficient_input",
   "confidence": number

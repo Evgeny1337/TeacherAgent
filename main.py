@@ -1,26 +1,16 @@
-import os
-from pathlib import Path
+# This is a sample Python script.
 
-from dotenv import load_dotenv
+# Press Shift+F10 to execute it or replace it with your code.
+# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-from intake.pipeline.run import run_intake
-from intake.schemas.teacher_request import TeacherRequest
 
-load_dotenv()
+def print_hi(name):
+    # Use a breakpoint in the code line below to debug your script.
+    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
 
-API_KEY = os.getenv("API_KEY")
-if not API_KEY:
-    raise RuntimeError("API_KEY is not set")
 
-request = TeacherRequest(
-    teacher_description=(
-        "Сделай бриф урока A1–A2 на 40–45 минут по was/were для Elementary. "
-        "Есть готовый worksheet: gap-fill, choose was/were, rewrite am/is/are → was/were. "
-        "Нужны цель урока, фокус грамматики и чего не хватает для полного плана. "
-        "Класс: дети 10–12 лет, 10 учеников."
-    ),
-    files=[Path(__file__).parent / "test_teacher.pdf"],
-)
+# Press the green button in the gutter to run the script.
+if __name__ == '__main__':
+    print_hi('PyCharm')
 
-lesson = run_intake(request, API_KEY)
-print(lesson)
+# See PyCharm help at https://www.jetbrains.com/help/pycharm/

@@ -2,7 +2,7 @@ from typing import List
 
 from markitdown import DocumentConverterResult
 
-CHAR_COUNT = 10000
+CHAR_COUNT = 5000
 
 
 def get_text_chunks(extracted_text: DocumentConverterResult) -> List[str]:

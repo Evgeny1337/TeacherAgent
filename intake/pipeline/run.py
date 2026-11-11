@@ -20,6 +20,7 @@ def _empty_materials_response() -> LessonInfoResponse:
         language_focus=[],
         based_on_materials=[],
         assumptions=[],
+        missing_info=["usable text from attached materials"],
         clarifying_questions=[
             "Приложите pdf/docx/pptx с извлекаемым текстом или вставьте текст материала.",
         ],
