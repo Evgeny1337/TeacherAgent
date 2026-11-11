@@ -1,4 +1,5 @@
 annotated-types==0.8.0
+anyio==4.16.0
 audioop-lts==0.2.2
 azure-ai-contentunderstanding==1.2.0b3
 azure-ai-documentintelligence==1.0.2
@@ -14,8 +15,12 @@ cryptography==50.0.2
 defusedxml==0.7.1
 et_xmlfile==2.0.0
 flatbuffers==25.12.19
+h11==0.16.0
+httpcore2==2.16.0
+httpx2==2.16.0
 idna==3.20
 isodate==0.7.2
+jiter==0.19.0
 lxml==6.1.3
 magika==1.0.3
 mammoth==1.13.0
@@ -26,6 +31,7 @@ msal-extensions==1.3.1
 numpy==2.5.4
 olefile==0.47
 onnxruntime==1.31.1
+openai==3.49.0
 openpyxl==3.1.5
 packaging==26.3
 pandas==3.1.1
@@ -40,13 +46,16 @@ pydub==0.25.1
 PyJWT==2.15.1
 pypdfium2==5.15.2
 python-dateutil==4.0.0
+python-dotenv==1.2.4
 python-pptx==1.0.2
 requests==2.34.2
 six==1.17.0
+sniffio==1.3.1
 soupsieve==4.1
 SpeechRecognition==3.17.0
 standard-aifc==3.13.0
 standard-chunk==3.13.0
+truststore==0.10.5
 typing-inspection==0.4.5
 typing_extensions==4.16.0
 tzdata==2026.6

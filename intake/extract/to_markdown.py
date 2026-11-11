@@ -10,6 +10,4 @@ def extract_files(paths: list[Path]) -> list[DocumentConverterResult]:
     return extracted_text
 
 
-test_path = Path(__file__).parent.parent.parent / 'test_teacher.pdf'
-for i in extract_files([test_path]):
-    print(i)
+
