@@ -25,7 +25,7 @@ class CefrLevel(Enum):
     B1 = "B1"
     B2 = "B2"
     C1 = "C1"
-    C2 = "C2",
+    C2 = "C2"
 
 class LessonType(Enum):
     GRAMMAR = "grammar"
