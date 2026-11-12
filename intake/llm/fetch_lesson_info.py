@@ -1,3 +1,5 @@
+from functools import wraps
+
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
@@ -13,7 +15,7 @@ You receive:
 Your job:
 - Understand what lesson the teacher wants
 - Use materials only as evidence
-- Do NOT write a full lesson plan with timed activities
+- Do NOT recordWord a full lesson plan with timed activities
 - Do NOT invent worksheet content that is not supported by materials
 - If information is missing, put null, list gaps in missing_info, and ask clarifying questions
 - If a material has little/no usable text, mention that in clarifying_questions

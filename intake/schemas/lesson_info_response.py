@@ -3,22 +3,6 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-# {
-#   "goal": string,
-#   "topic": string | null,
-#   "cefr_level": "A1"|"A2"|"B1"|"B2"|"C1"|"C2"|null,
-#   "duration_minutes": number | null,
-#   "skills": string[],
-#   "lesson_type": "grammar"|"skills"|"exam_prep"|"revision"|"mixed"|"unclear",
-#   "language_focus": string[],
-#   "based_on_materials": string[],
-#   "assumptions": string[],
-#   "missing_info": string[],
-#   "clarifying_questions": string[],
-#   "readiness": "ready"|"needs_clarification"|"insufficient_input",
-#   "confidence": number
-# }
-
 class CefrLevel(Enum):
     A1 = "A1"
     A2 = "A2"
