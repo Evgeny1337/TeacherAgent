@@ -6,7 +6,7 @@ from mddocx import render_string, RenderConfig
 from plan.schemas.plan_shema import LessonPlan
 
 def convert_md(doc: DocxTemplate, md_text: str):
-    docx_bytes = render_string(md_text or "", config=RenderConfig(theme="default"))
+    docx_bytes = render_string(md_text or "", config=RenderConfig(theme="modern"))
     with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
         tmp.write(docx_bytes)
         tmp_path = tmp.name
