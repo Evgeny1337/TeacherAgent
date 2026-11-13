@@ -4,7 +4,6 @@ from collections.abc import Callable
 
 
 def add_history_control(page: ft.Page) -> Callable[[str], None]:
-    """Компактная лента событий сессии (не чат). Возвращает add_entry(text)."""
     entries: deque[str] = deque(maxlen=20)
     list_view = ft.ListView(height=160, spacing=2, auto_scroll=True)
 
