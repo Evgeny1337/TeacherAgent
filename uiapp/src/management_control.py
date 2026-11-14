@@ -1,9 +1,13 @@
 import flet as ft
 from collections.abc import Callable
 
+from layout_utils import actions_bar
 
-def add_management_control(page: ft.Page) -> Callable[[str, str, str], None]:
-    cards_list = ft.ListView(height=160, spacing=8, auto_scroll=True)
+
+def build_management_control(
+    page: ft.Page,
+) -> tuple[ft.Control, Callable[[str, str, str], None]]:
+    cards_list = ft.ListView(expand=True, spacing=8, auto_scroll=True)
     progress_bar = ft.ProgressBar()
     status_text = ft.Text("Статус: —", size=13)
 
@@ -35,7 +39,7 @@ def add_management_control(page: ft.Page) -> Callable[[str, str, str], None]:
                         ft.Row(
                             alignment=ft.MainAxisAlignment.END,
                             controls=[
-                                ft.Button("Скачать", on_click=on_download),
+                                ft.OutlinedButton("Скачать", on_click=on_download),
                             ],
                         ),
                     ],
@@ -57,17 +61,20 @@ def add_management_control(page: ft.Page) -> Callable[[str, str, str], None]:
         "preview",
     )
 
-    page.add(
-        ft.Text("Результат / превью", weight=ft.FontWeight.BOLD),
-        status_text,
-        progress_bar,
-        cards_list,
-        ft.Row(
-            controls=[
+    panel = ft.Column(
+        expand=True,
+        spacing=10,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+        controls=[
+            ft.Text("Результат / превью", weight=ft.FontWeight.BOLD),
+            status_text,
+            progress_bar,
+            cards_list,
+            actions_bar(
                 ft.Button("Подтвердить", on_click=on_confirm),
-                ft.Button("Подтвердить своим файлом", on_click=on_confirm_own_file),
-                ft.Button("Отправить на доработку", on_click=on_send_revise),
-            ],
-        ),
+                ft.OutlinedButton("Свой файл", on_click=on_confirm_own_file),
+                ft.OutlinedButton("На доработку", on_click=on_send_revise),
+            ),
+        ],
     )
-    return add_preview
+    return panel, add_preview

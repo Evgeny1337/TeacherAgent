@@ -3,9 +3,11 @@ from collections import deque
 from collections.abc import Callable
 
 
-def add_history_control(page: ft.Page) -> Callable[[str], None]:
+def build_history_control(
+    page: ft.Page,
+) -> tuple[ft.Control, Callable[[str], None]]:
     entries: deque[str] = deque(maxlen=20)
-    list_view = ft.ListView(height=160, spacing=2, auto_scroll=True)
+    list_view = ft.ListView(height=100, spacing=2, auto_scroll=True)
 
     def add_entry(text: str) -> None:
         text = (text or "").strip()
@@ -15,8 +17,11 @@ def add_history_control(page: ft.Page) -> Callable[[str], None]:
         list_view.controls = [ft.Text(f"• {item}", size=13) for item in entries]
         page.update()
 
-    page.add(
-        ft.Text("История", weight=ft.FontWeight.BOLD),
-        list_view,
+    panel = ft.Column(
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+        controls=[
+            ft.Text("История", weight=ft.FontWeight.BOLD),
+            list_view,
+        ],
     )
-    return add_entry
+    return panel, add_entry
