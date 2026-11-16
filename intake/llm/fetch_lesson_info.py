@@ -32,8 +32,18 @@ def fetch_lesson_info(
         model="deepseek-flash",
         messages=messages,
         response_format={"type": "json_object"},
+        max_tokens=4096,
+        extra_body={"thinking": {"type": "disabled"}},
     )
     content = response.choices[0].message.content
     if not content or not content.strip():
         raise ValueError("DeepSeek returned empty content")
-    return LessonInfoResponse.model_validate_json(content)
+    try:
+        return LessonInfoResponse.model_validate_json(content)
+    except Exception as exc:
+        preview = content if len(content) <= 500 else f"{content[:500]}..."
+        raise ValueError(
+            f"Невалидный JSON brief ({exc}). "
+            f"finish_reason={response.choices[0].finish_reason!r}. "
+            f"Фрагмент ответа: {preview}"
+        ) from exc

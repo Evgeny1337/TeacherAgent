@@ -1,18 +1,22 @@
+import asyncio
+from collections.abc import Callable
+from pathlib import Path
+
 import flet as ft
 
 from layout_utils import actions_bar
+from pipeline import create_file_name, run_generate_lesson
+from schemas.ui_events import LessonGenerateEvent
 
 _FILES_LIST_HEIGHT = 96
 
 
-def build_input_control(page: ft.Page) -> ft.Control:
-    """
-    Layout (top → bottom, fixed footer):
-      header
-      description  (expands, fills free space)
-      materials    (fixed height + scroll)
-      actions_bar  (always pinned at bottom)
-    """
+def build_input_control(
+    page: ft.Page,
+    on_lesson_generate: Callable[[LessonGenerateEvent], bool],
+    on_lesson_ready: Callable[[LessonGenerateEvent], bool],
+    on_lesson_failed: Callable[[LessonGenerateEvent, Exception], bool],
+) -> ft.Control:
     description = ft.TextField(
         label="Задайте описание урока",
         expand=True,
@@ -20,8 +24,7 @@ def build_input_control(page: ft.Page) -> ft.Control:
         min_lines=3,
         shift_enter=True,
     )
-    selected_paths: list[str] = []
-    selected_names: list[str] = []
+    selected_paths: list[Path] = []
     file_picker = ft.FilePicker()
     page.services.append(file_picker)
 
@@ -29,13 +32,11 @@ def build_input_control(page: ft.Page) -> ft.Control:
     files_count = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
     clear_all_btn = ft.TextButton("Очистить", visible=False)
 
-    def _remove_file(path: str):
+    def _remove_file(path: Path):
         def handler(e: ft.Event[ft.IconButton]):
             if path not in selected_paths:
                 return
-            index = selected_paths.index(path)
-            selected_paths.pop(index)
-            selected_names.pop(index)
+            selected_paths.remove(path)
             _refresh_files_view()
             page.update()
 
@@ -43,7 +44,6 @@ def build_input_control(page: ft.Page) -> ft.Control:
 
     def _clear_all(e: ft.Event[ft.TextButton]):
         selected_paths.clear()
-        selected_names.clear()
         _refresh_files_view()
         page.update()
 
@@ -61,7 +61,7 @@ def build_input_control(page: ft.Page) -> ft.Control:
             ),
         )
 
-    def _file_row(path: str, name: str) -> ft.Control:
+    def _file_row(path: Path) -> ft.Control:
         return ft.Container(
             padding=ft.Padding.symmetric(horizontal=8, vertical=4),
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
@@ -73,7 +73,7 @@ def build_input_control(page: ft.Page) -> ft.Control:
                 controls=[
                     ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=16),
                     ft.Text(
-                        name,
+                        path.name,
                         size=12,
                         expand=True,
                         max_lines=1,
@@ -90,7 +90,7 @@ def build_input_control(page: ft.Page) -> ft.Control:
         )
 
     def _refresh_files_view() -> None:
-        count = len(selected_names)
+        count = len(selected_paths)
         if count == 0:
             files_count.value = ""
             clear_all_btn.visible = False
@@ -99,12 +99,9 @@ def build_input_control(page: ft.Page) -> ft.Control:
 
         files_count.value = f"{count} файл(ов)"
         clear_all_btn.visible = True
-        files_list.controls = [
-            _file_row(path, name)
-            for path, name in zip(selected_paths, selected_names)
-        ]
+        files_list.controls = [_file_row(path) for path in selected_paths]
 
-    # Fixed-height materials block — attaching files must not push actions away.
+
     files_box = ft.Container(
         height=_FILES_LIST_HEIGHT + 48,
         padding=12,
@@ -137,24 +134,43 @@ def build_input_control(page: ft.Page) -> ft.Control:
     )
 
     async def on_pick_files(e: ft.Event[ft.Button]):
-        saved_description = description.value or ""
         files = await file_picker.pick_files(
             allow_multiple=True,
             file_type=ft.FilePickerFileType.CUSTOM,
             allowed_extensions=["docx", "pdf", "pptx"],
         )
-        description.value = saved_description
         if files:
             for f in files:
-                if not f.path or f.path in selected_paths:
+                if not f.path:
                     continue
-                selected_paths.append(f.path)
-                selected_names.append(f.name)
+                path = Path(f.path)
+                if path in selected_paths:
+                    continue
+                selected_paths.append(path)
             _refresh_files_view()
         page.update()
 
-    def on_send_request(e: ft.Event[ft.Button]):
-        description.value = ""
+    async def on_send_request(e: ft.Event[ft.Button]):
+        file_name = create_file_name()
+        event = LessonGenerateEvent(
+            file_path=file_name,
+            teacher_description=description.value or "",
+            materials=list(selected_paths),
+        )
+        on_lesson_generate(event)
+        try:
+            await asyncio.to_thread(
+                run_generate_lesson,
+                file_name=file_name,
+                teacher_description=event.teacher_description,
+                materials=event.materials,
+            )
+            on_lesson_ready(event.model_copy(update={"status": "ready"}))
+        except Exception as exc:
+            on_lesson_failed(
+                event.model_copy(update={"status": "error"}),
+                exc,
+            )
         page.update()
 
     _refresh_files_view()

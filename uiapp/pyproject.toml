@@ -8,7 +8,10 @@ authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
 dependencies = [
-    "flet>=1.1.2"
+    "flet>=1.1.2",
+    "pydantic>=2",
+    # локальный пакет из корня репо (pip / PEP 508), не PyPI и не uv
+    "teacher-agent @ file:../",
 ]
 
 [dependency-groups]
@@ -42,3 +45,4 @@ copyright = "Copyright (C) 2023-2026 by Flet"
 
 [tool.flet.app]
 path = "src"
+

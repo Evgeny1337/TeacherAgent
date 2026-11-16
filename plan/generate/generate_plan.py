@@ -40,8 +40,18 @@ def generate_lesson_plan(
         model="deepseek-flash",
         messages=messages,
         response_format={"type": "json_object"},
+        max_tokens=8192,
+        extra_body={"thinking": {"type": "disabled"}},
     )
     content = response.choices[0].message.content
     if not content or not content.strip():
         raise ValueError("DeepSeek returned empty content")
-    return LessonPlan.model_validate_json(content)
+    try:
+        return LessonPlan.model_validate_json(content)
+    except Exception as exc:
+        preview = content if len(content) <= 500 else f"{content[:500]}..."
+        raise ValueError(
+            f"Невалидный JSON плана урока ({exc}). "
+            f"finish_reason={response.choices[0].finish_reason!r}. "
+            f"Фрагмент ответа: {preview}"
+        ) from exc

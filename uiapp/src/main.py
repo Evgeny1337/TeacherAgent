@@ -20,8 +20,19 @@ def main(page: ft.Page):
     page.title = "TeacherAgent"
     page.padding = 16
 
-    input_panel = build_input_control(page)
-    result_panel, _add_preview = build_management_control(page)
+    (
+        result_panel,
+        _add_preview,
+        on_lesson_generate,
+        on_lesson_ready,
+        on_lesson_failed,
+    ) = build_management_control(page)
+    input_panel = build_input_control(
+        page,
+        on_lesson_generate,
+        on_lesson_ready,
+        on_lesson_failed,
+    )
     history_panel, _add_entry = build_history_control(page)
 
     page.add(
