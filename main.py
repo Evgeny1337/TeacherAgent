@@ -43,7 +43,7 @@ def main():
         format_preferences=format_preferences,
         api_key=api_key,
     )
-    record_lesson_plan_to_word(plan)
+    record_lesson_plan_to_word(plan, Path(__file__).parent / "out.docx")
 
 
 if __name__ == "__main__":

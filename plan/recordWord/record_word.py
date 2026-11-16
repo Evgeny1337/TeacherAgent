@@ -21,7 +21,7 @@ def convert_md(doc: DocxTemplate, md_text: str):
     return doc.new_subdoc(tmp_path)
 
 
-def record_lesson_plan_to_word(lesson_plan: LessonPlan, file_name: Path) -> bool:
+def record_lesson_plan_to_word(lesson_plan: LessonPlan, file_name: Path) -> Path:
     doc = DocxTemplate("templates/lesson/lesson_plan.docx")
     context = lesson_plan.model_dump()
     for handout in context.get("handouts") or []:
@@ -31,4 +31,4 @@ def record_lesson_plan_to_word(lesson_plan: LessonPlan, file_name: Path) -> bool
         worksheet["body"] = convert_md(doc, worksheet.get("body", ""))
     doc.render(context)
     doc.save(file_name)
-    return True
+    return file_name
