@@ -1,8 +1,12 @@
+import asyncio
 from collections.abc import Callable
+from pathlib import Path
 
 import flet as ft
 
 from layout_utils import actions_bar
+from plan.recordWord.record_word import record_lesson_plan_to_word
+from plan.schemas.plan_shema import LessonPlan
 from schemas.ui_events import LessonGenerateEvent, LessonPreviewEvent
 
 
@@ -18,6 +22,30 @@ def build_management_control(
     cards_list = ft.ListView(expand=True, spacing=8, auto_scroll=True)
     progress_bar = ft.ProgressBar()
     status_text = ft.Text("Статус: —", size=13)
+
+    async def on_download(e: ft.Event[ft.OutlinedButton]):
+        payload = e.control.data
+        if not isinstance(payload, dict):
+            page.show_dialog(ft.SnackBar(ft.Text("Нет данных для сохранения")))
+            return
+        plan = payload.get("plan")
+        file_path = payload.get("file_path")
+        if not isinstance(plan, LessonPlan) or not isinstance(file_path, Path):
+            page.show_dialog(ft.SnackBar(ft.Text("Некорректные данные плана")))
+            return
+        try:
+            saved = await asyncio.to_thread(
+                record_lesson_plan_to_word,
+                plan,
+                file_path,
+            )
+            page.show_dialog(
+                ft.SnackBar(ft.Text(f"Файл сохранён: {saved}"))
+            )
+        except Exception as exc:
+            page.show_dialog(
+                ft.SnackBar(ft.Text(f"Ошибка сохранения: {exc}"))
+            )
 
     def on_confirm(e: ft.Event[ft.Button]):
         pass
@@ -108,9 +136,26 @@ def build_management_control(
 
     def on_lesson_ready(event: LessonGenerateEvent) -> bool:
         card = _find_card(event.card_id)
-        if card is None:
+        if card is None or event.plan is None:
             return False
         _set_card_status(card, event.status or "ready")
+        column = card.content.content
+        column.controls.append(
+            ft.Row(
+                alignment=ft.MainAxisAlignment.END,
+                controls=[
+                    ft.OutlinedButton(
+                        "Скачать",
+                        data={
+                            "plan": event.plan,
+                            "file_path": event.file_path,
+                        },
+                        on_click=on_download,
+                    ),
+                ],
+            )
+        )
+        page.update()
         return True
 
     def on_lesson_failed(event: LessonGenerateEvent, error: Exception) -> bool:

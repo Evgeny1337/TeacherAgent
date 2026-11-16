@@ -2,12 +2,14 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from plan.schemas.plan_shema import LessonPlan
 
 class LessonGenerateEvent(BaseModel):
     file_path: Path
     teacher_description: str = ""
     materials: list[Path] = Field(default_factory=list)
     status: str = "generating"
+    plan: LessonPlan | None = None
 
     @property
     def card_id(self) -> str:

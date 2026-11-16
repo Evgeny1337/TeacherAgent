@@ -159,13 +159,15 @@ def build_input_control(
         )
         on_lesson_generate(event)
         try:
-            await asyncio.to_thread(
+            plan = await asyncio.to_thread(
                 run_generate_lesson,
                 file_name=file_name,
                 teacher_description=event.teacher_description,
                 materials=event.materials,
             )
-            on_lesson_ready(event.model_copy(update={"status": "ready"}))
+            on_lesson_ready(
+                event.model_copy(update={"status": "ready", "plan": plan})
+            )
         except Exception as exc:
             on_lesson_failed(
                 event.model_copy(update={"status": "error"}),

@@ -8,7 +8,7 @@ from intake.extract.to_markdown import extract_files
 from intake.llm.fetch_lesson_info import fetch_lesson_info
 from plan.generate.generate_plan import generate_lesson_plan
 from plan.recordWord.record_word import record_lesson_plan_to_word
-
+from plan.schemas.plan_shema import LessonPlan
 
 load_dotenv()
 
@@ -25,7 +25,7 @@ def create_file_name() -> Path:
             return path
         n += 1
 
-def run_generate_lesson(materials: list[Path], teacher_description: str, file_name: Path, format_preferences:str = "none") -> Path:
+def run_generate_lesson(materials: list[Path], teacher_description: str, file_name: Path, format_preferences:str = "none") -> LessonPlan:
     if not API_KEY:
         raise Exception("Не задан ключ DeepSeek")
     markdown_files = extract_files(materials)
@@ -52,6 +52,6 @@ def run_generate_lesson(materials: list[Path], teacher_description: str, file_na
         api_key=API_KEY,
     )
 
-    return record_lesson_plan_to_word(plan, file_name)
+    return plan
 
 
