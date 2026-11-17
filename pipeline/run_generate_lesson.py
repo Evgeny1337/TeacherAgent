@@ -51,7 +51,7 @@ def run_generate_lesson(materials: list[Path], teacher_description: str, file_na
         format_preferences=format_preferences,
         api_key=API_KEY,
     )
-
+    record_lesson_plan_to_word(plan, file_name)
     return plan
 
 

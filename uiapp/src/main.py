@@ -3,6 +3,7 @@ import flet as ft
 from history_control import build_history_control
 from input_control import build_input_control
 from management_control import build_management_control
+from schemas.lesson_session import AppState
 
 
 def _section(content: ft.Control, *, expand: bool = False) -> ft.Container:
@@ -19,10 +20,10 @@ def _section(content: ft.Control, *, expand: bool = False) -> ft.Container:
 def main(page: ft.Page):
     page.title = "TeacherAgent"
     page.padding = 16
+    page.app_state = AppState()
 
     (
         result_panel,
-        _add_preview,
         on_lesson_generate,
         on_lesson_ready,
         on_lesson_failed,

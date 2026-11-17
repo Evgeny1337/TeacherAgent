@@ -6,6 +6,7 @@ import flet as ft
 
 from layout_utils import actions_bar
 from pipeline import create_file_name, run_generate_lesson
+from schemas.lesson_session import LessonStatus
 from schemas.ui_events import LessonGenerateEvent
 
 _FILES_LIST_HEIGHT = 96
@@ -151,6 +152,20 @@ def build_input_control(
         page.update()
 
     async def on_send_request(e: ft.Event[ft.Button]):
+        session = page.app_state.active
+        if session is not None and session.status in (
+            LessonStatus.GENERATING,
+            LessonStatus.REVISING,
+            LessonStatus.READY,
+        ):
+            if session.status is LessonStatus.READY:
+                page.show_dialog(
+                    ft.SnackBar(
+                        ft.Text("Сначала подтвердите текущий урок")
+                    )
+                )
+            return
+
         file_name = create_file_name()
         event = LessonGenerateEvent(
             file_path=file_name,
@@ -166,16 +181,25 @@ def build_input_control(
                 materials=event.materials,
             )
             on_lesson_ready(
-                event.model_copy(update={"status": "ready", "plan": plan})
+                event.model_copy(
+                    update={"status": LessonStatus.READY, "plan": plan}
+                )
             )
         except Exception as exc:
             on_lesson_failed(
-                event.model_copy(update={"status": "error"}),
+                event.model_copy(update={"status": LessonStatus.ERROR}),
                 exc,
             )
         page.update()
 
     _refresh_files_view()
+
+    generate_btn = ft.Button("Сгенерировать", on_click=on_send_request)
+    page.generate_btn = generate_btn
+    sync_actions = getattr(page, "sync_actions", None)
+    if sync_actions is not None:
+        active = page.app_state.active
+        sync_actions(active.status if active is not None else None)
 
     return ft.Column(
         expand=True,
@@ -187,7 +211,7 @@ def build_input_control(
             files_box,
             actions_bar(
                 ft.OutlinedButton("Прикрепить", on_click=on_pick_files),
-                ft.Button("Сгенерировать", on_click=on_send_request),
+                generate_btn,
             ),
         ],
     )
