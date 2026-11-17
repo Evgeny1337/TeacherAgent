@@ -5,7 +5,7 @@ from pathlib import Path
 import flet as ft
 
 from layout_utils import actions_bar
-from pipeline import create_file_name, run_generate_lesson
+from pipeline import create_file_name, run_generate_lesson, run_revise_lesson
 from schemas.lesson_session import LessonStatus
 from schemas.ui_events import LessonGenerateEvent
 
@@ -33,25 +33,51 @@ def build_input_control(
     files_count = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
     clear_all_btn = ft.TextButton("Очистить", visible=False)
 
+    def _session_busy() -> bool:
+        session = page.app_state.active
+        return session is not None and session.status in (
+            LessonStatus.GENERATING,
+            LessonStatus.REVISING,
+        )
+
+    def _sync_own_btn() -> None:
+        own_btn = (getattr(page, "ui", {}) or {}).get("own_btn")
+        session = page.app_state.active
+        if own_btn is None or session is None:
+            return
+        if session.status is LessonStatus.READY:
+            own_btn.disabled = len(selected_paths) != 1
+        page.update()
+
+    def _reset_input() -> None:
+        page.app_state.active = None
+        description.value = ""
+        selected_paths.clear()
+        _refresh_files_view()
+        sync = getattr(page, "sync_actions", None)
+        if sync is not None:
+            sync(None)
+        else:
+            page.update()
+
     def _remove_file(path: Path):
         def handler(e: ft.Event[ft.IconButton]):
-            session = page.app_state.active
-            if session is not None:
+            if _session_busy():
                 return
             if path not in selected_paths:
                 return
             selected_paths.remove(path)
             _refresh_files_view()
-            page.update()
+            _sync_own_btn()
 
         return handler
 
     def _clear_all(e: ft.Event[ft.TextButton]):
-        if page.app_state.active is not None:
+        if _session_busy():
             return
         selected_paths.clear()
         _refresh_files_view()
-        page.update()
+        _sync_own_btn()
 
     clear_all_btn.on_click = _clear_all
 
@@ -68,7 +94,6 @@ def build_input_control(
         )
 
     def _file_row(path: Path) -> ft.Control:
-        locked = page.app_state.active is not None
         return ft.Container(
             padding=ft.Padding.symmetric(horizontal=8, vertical=4),
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
@@ -90,7 +115,7 @@ def build_input_control(
                         icon=ft.Icons.CLOSE,
                         icon_size=16,
                         tooltip="Открепить",
-                        disabled=locked,
+                        disabled=_session_busy(),
                         on_click=_remove_file(path),
                     ),
                 ],
@@ -141,7 +166,7 @@ def build_input_control(
     )
 
     async def on_pick_files(e: ft.Event[ft.Button]):
-        if page.app_state.active is not None:
+        if _session_busy():
             return
         files = await file_picker.pick_files(
             allow_multiple=True,
@@ -157,6 +182,7 @@ def build_input_control(
                     continue
                 selected_paths.append(path)
             _refresh_files_view()
+            _sync_own_btn()
         page.update()
 
     async def on_send_request(e: ft.Event[ft.Button]):
@@ -168,6 +194,8 @@ def build_input_control(
             teacher_description=description.value or "",
             materials=list(selected_paths),
         )
+        selected_paths.clear()
+        _refresh_files_view()
         on_lesson_generate(event)
         try:
             plan = await asyncio.to_thread(
@@ -188,21 +216,68 @@ def build_input_control(
             )
         page.update()
 
-    def on_revise(e: ft.Event[ft.Button]):
+    async def on_revise(e: ft.Event[ft.Button]):
         session = page.app_state.active
         if session is None or session.status is not LessonStatus.READY:
+            return
+        if session.plan is None:
+            page.show_dialog(ft.SnackBar(ft.Text("Нет плана для доработки")))
             return
         notes = (description.value or "").strip()
         if not notes:
             page.show_dialog(ft.SnackBar(ft.Text("Опишите, что доработать")))
             return
         session.revision_notes = notes
-        page.show_dialog(
-            ft.SnackBar(ft.Text("Доработка будет подключена позже"))
+        previous_plan = session.plan
+        file_path = session.file_path
+        materials = list(session.materials)
+        event = LessonGenerateEvent(
+            file_path=file_path,
+            teacher_description=notes,
+            materials=materials,
+            status=LessonStatus.REVISING,
+            plan=previous_plan,
         )
+        on_lesson_generate(event)
+        try:
+            plan = await asyncio.to_thread(
+                run_revise_lesson,
+                previous_plan=previous_plan,
+                revision_notes=notes,
+                file_name=file_path,
+                materials=materials,
+            )
+            on_lesson_ready(
+                event.model_copy(
+                    update={"status": LessonStatus.READY, "plan": plan}
+                )
+            )
+        except Exception as exc:
+            on_lesson_failed(
+                event.model_copy(update={"status": LessonStatus.ERROR}),
+                exc,
+            )
+        page.update()
 
-    def on_new_request(e: ft.Event[ft.Button]):
-        page.app_state.active = None
+    def on_own_file(e: ft.Event[ft.Button]):
+        session = page.app_state.active
+        if session is None or session.status is not LessonStatus.READY:
+            return
+        if len(selected_paths) == 0:
+            page.show_dialog(ft.SnackBar(ft.Text("Приложите один свой файл")))
+            return
+        if len(selected_paths) > 1:
+            page.show_dialog(
+                ft.SnackBar(ft.Text("Для подтверждения нужен ровно один файл"))
+            )
+            return
+        own_path = selected_paths[0]
+        confirm_active = getattr(page, "confirm_active", None)
+        if confirm_active is None or not confirm_active(own_path):
+            return
+        page.show_dialog(
+            ft.SnackBar(ft.Text(f"Подтверждён свой файл: {own_path.name}"))
+        )
         description.value = ""
         selected_paths.clear()
         _refresh_files_view()
@@ -212,16 +287,16 @@ def build_input_control(
         else:
             page.update()
 
+    def on_new_request(e: ft.Event[ft.Button]):
+        _reset_input()
+
     _refresh_files_view()
 
     attach_btn = ft.OutlinedButton("Прикрепить", on_click=on_pick_files)
     generate_btn = ft.Button("Сгенерировать", on_click=on_send_request)
-    revise_btn = ft.OutlinedButton(
-        "На доработку", on_click=on_revise, visible=False
-    )
-    new_btn = ft.OutlinedButton(
-        "Новый запрос", on_click=on_new_request, visible=False
-    )
+    revise_btn = ft.OutlinedButton("На доработку", on_click=on_revise, visible=False)
+    own_btn = ft.OutlinedButton("Свой файл", on_click=on_own_file, visible=False)
+    new_btn = ft.OutlinedButton("Новый запрос", on_click=on_new_request, visible=False)
 
     page.ui = {
         "description": description,
@@ -229,8 +304,11 @@ def build_input_control(
         "clear_all_btn": clear_all_btn,
         "generate_btn": generate_btn,
         "revise_btn": revise_btn,
+        "own_btn": own_btn,
         "new_btn": new_btn,
         "refresh_files": _refresh_files_view,
+        "selected_paths": selected_paths,
+        "sync_own_btn": _sync_own_btn,
     }
     sync_actions = getattr(page, "sync_actions", None)
     if sync_actions is not None:
@@ -245,6 +323,6 @@ def build_input_control(
             ft.Text("Вход", weight=ft.FontWeight.BOLD),
             ft.Container(expand=True, content=description),
             files_box,
-            actions_bar(attach_btn, generate_btn, revise_btn, new_btn),
+            actions_bar(attach_btn, generate_btn, revise_btn, own_btn, new_btn),
         ],
     )

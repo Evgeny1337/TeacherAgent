@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from pathlib import Path
 
 import flet as ft
 
@@ -18,26 +19,32 @@ def build_management_control(
     cards_list = ft.ListView(expand=True, spacing=8, auto_scroll=True)
     status_text = ft.Text("Статус: —", size=13)
 
-    def on_confirm(e: ft.Event[ft.Button]):
+    def _confirm_active(file_path: Path | None = None) -> bool:
         session = page.app_state.active
         if session is None or session.status != LessonStatus.READY:
-            return
+            return False
         card = _find_card(session.id)
         if card is None:
-            return
+            return False
+        path = file_path or session.file_path
         session.status = LessonStatus.CONFIRMED
-        _update_card(card, LessonStatus.CONFIRMED, subtitle=str(session.file_path))
+        session.file_path = path
+        _update_card(
+            card,
+            LessonStatus.CONFIRMED,
+            subtitle=str(path),
+            file_path=str(path),
+        )
         page.app_state.active = None
         _sync_actions(None)
-        page.show_dialog(ft.SnackBar(ft.Text("Урок подтверждён")))
+        return True
 
-    def on_confirm_own_file(e: ft.Event[ft.Button]):
-        pass
+    def on_confirm(e: ft.Event[ft.Button]):
+        if _confirm_active():
+            page.show_dialog(ft.SnackBar(ft.Text("Урок подтверждён")))
 
     confirm_btn = ft.Button("Подтвердить", on_click=on_confirm, disabled=True)
-    own_confirm_btn = ft.OutlinedButton(
-        "Свой файл", on_click=on_confirm_own_file, disabled=True
-    )
+    page.confirm_active = _confirm_active
 
     def _sync_actions(status: LessonStatus | None) -> None:
         ui = getattr(page, "ui", {}) or {}
@@ -53,10 +60,11 @@ def build_management_control(
         for key in ("attach_btn", "clear_all_btn"):
             control = ui.get(key)
             if control is not None:
-                control.disabled = busy or has_session
+                control.disabled = busy
 
         generate_btn = ui.get("generate_btn")
         revise_btn = ui.get("revise_btn")
+        own_btn = ui.get("own_btn")
         new_btn = ui.get("new_btn")
         if generate_btn is not None:
             generate_btn.visible = idle
@@ -64,6 +72,13 @@ def build_management_control(
         if revise_btn is not None:
             revise_btn.visible = has_session
             revise_btn.disabled = not ready
+        if own_btn is not None:
+            own_btn.visible = has_session
+            if ready:
+                paths = ui.get("selected_paths") or []
+                own_btn.disabled = len(paths) != 1
+            else:
+                own_btn.disabled = True
         if new_btn is not None:
             new_btn.visible = has_session
             new_btn.disabled = busy
@@ -73,7 +88,6 @@ def build_management_control(
             refresh_files()
 
         confirm_btn.disabled = not ready
-        own_confirm_btn.disabled = busy
         page.update()
 
     page.sync_actions = _sync_actions
@@ -130,9 +144,22 @@ def build_management_control(
 
     def on_lesson_generate(event: LessonGenerateEvent) -> bool:
         title = (event.title or "").strip()
-        if not title:
+        if not title and event.status is not LessonStatus.REVISING:
             raise ValueError("Пустой заголовок")
         status = event.status or LessonStatus.GENERATING
+
+        if status is LessonStatus.REVISING:
+            session = page.app_state.active
+            if session is None or session.id != event.card_id:
+                return False
+            session.status = status
+            session.revision_notes = event.teacher_description
+            card = _find_card(event.card_id)
+            if card is not None:
+                _update_card(card, status)
+            _sync_actions(status)
+            return True
+
         _sync_actions(status)
         cards_list.controls.append(
             _make_card(
@@ -158,7 +185,6 @@ def build_management_control(
         if event.plan is None:
             return False
         status = event.status or LessonStatus.READY
-        _sync_actions(status)
         path_text = str(event.file_path)
         session = page.app_state.active
         if session and session.id == event.card_id:
@@ -169,12 +195,12 @@ def build_management_control(
         if card is None:
             return False
         _update_card(card, status, subtitle=path_text, file_path=path_text)
+        _sync_actions(status)
         page.show_dialog(ft.SnackBar(ft.Text(f"Файл готов: {event.file_path.name}")))
         return True
 
     def on_lesson_failed(event: LessonGenerateEvent, error: Exception) -> bool:
         status = event.status or LessonStatus.ERROR
-        _sync_actions(status)
         session = page.app_state.active
         if session and session.id == event.card_id:
             session.status = status
@@ -185,6 +211,7 @@ def build_management_control(
         if len(message) > 80:
             message = f"{message[:77]}..."
         _update_card(card, status, subtitle=message)
+        _sync_actions(status)
         return True
 
     panel = ft.Column(
@@ -195,7 +222,7 @@ def build_management_control(
             ft.Text("Результат / превью", weight=ft.FontWeight.BOLD),
             status_text,
             cards_list,
-            actions_bar(confirm_btn, own_confirm_btn),
+            actions_bar(confirm_btn),
         ],
     )
     _sync_actions(None)
