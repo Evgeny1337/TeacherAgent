@@ -5,11 +5,17 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from plan.schemas.plan_shema import LessonPlan
 
+_PROMPTS_DIR = Path(__file__).parent
 
-def _request_lesson_plan(api_key: str, user_prompt: str) -> LessonPlan:
-    system_prompt = (Path(__file__).parent / "create_plan_prompt.md").read_text(
-        encoding="utf-8"
-    )
+SYSTEM_PROMPT = (_PROMPTS_DIR / "create_plan_prompt.md").read_text(encoding="utf-8")
+REVISE_ROUTER_PROMPT = (_PROMPTS_DIR / "revise_router_prompt.md").read_text(
+    encoding="utf-8"
+)
+REVISE_PATCH_PROMPT = (_PROMPTS_DIR / "revise_patch_prompt.md").read_text(
+    encoding="utf-8"
+)
+
+def _request_lesson_plan(api_key: str, user_prompt: str, system_prompt: str = SYSTEM_PROMPT) -> LessonPlan:
     client = OpenAI(
         api_key=api_key,
         base_url="https://api.deepseek.com",
