@@ -44,18 +44,14 @@ def main(page: ft.Page):
         last_session = LessonSession.model_validate_json(LAST_SESSION_FILE.read_text())
         page.app_state.active = last_session
 
-    (
-        result_panel,
-        on_lesson_generate,
-        on_lesson_ready,
-        on_lesson_failed,
-    ) = build_management_control(page)
+    management = build_management_control(page)
     input_panel = build_input_control(
         page,
-        on_lesson_generate,
-        on_lesson_ready,
-        on_lesson_failed,
+        management.on_lesson_generate,
+        management.on_lesson_ready,
+        management.on_lesson_failed,
     )
+    management.restore_active_session()
     history_panel, _add_entry = build_history_control(page)
 
     page.add(
@@ -70,7 +66,7 @@ def main(page: ft.Page):
                     controls=[
                         _section(input_panel, expand=True),
                         ft.VerticalDivider(width=1, color=ft.Colors.OUTLINE_VARIANT),
-                        _section(result_panel, expand=True),
+                        _section(management.panel, expand=True),
                     ],
                 ),
                 ft.Divider(height=1, color=ft.Colors.OUTLINE_VARIANT),

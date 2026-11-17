@@ -1,5 +1,5 @@
 from schemas.lesson_session import AppState, LessonSession, LessonStatus
-from schemas.ui_events import HistoryEntryEvent, LessonGenerateEvent
+from schemas.ui_events import HistoryEntryEvent, LessonGenerateEvent, ManagementControl
 
 __all__ = [
     "AppState",
@@ -7,4 +7,5 @@ __all__ = [
     "LessonGenerateEvent",
     "LessonSession",
     "LessonStatus",
+    "ManagementControl",
 ]

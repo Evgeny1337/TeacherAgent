@@ -1,21 +1,13 @@
-from collections.abc import Callable
 from pathlib import Path
 
 import flet as ft
 
 from layout_utils import actions_bar
 from schemas.lesson_session import LessonSession, LessonStatus
-from schemas.ui_events import LessonGenerateEvent
+from schemas.ui_events import LessonGenerateEvent, ManagementControl
 
 
-def build_management_control(
-    page: ft.Page,
-) -> tuple[
-    ft.Control,
-    Callable[[LessonGenerateEvent], bool],
-    Callable[[LessonGenerateEvent], bool],
-    Callable[[LessonGenerateEvent, Exception], bool],
-]:
+def build_management_control(page: ft.Page) -> ManagementControl:
     cards_list = ft.ListView(expand=True, spacing=8, auto_scroll=True)
     status_text = ft.Text("Статус: —", size=13)
 
@@ -110,7 +102,7 @@ def build_management_control(
                             leading=ft.Icon(ft.Icons.DESCRIPTION_OUTLINED),
                             title=ft.Text(title, weight=ft.FontWeight.BOLD),
                             subtitle=ft.Text(subtitle, size=13),
-                            trailing=ft.Text(status.value, size=12),
+                            trailing=ft.Text(str(status), size=12),
                         ),
                     ],
                 ),
@@ -134,13 +126,42 @@ def build_management_control(
         file_path: str | None = None,
     ) -> None:
         tile = card.content.content.controls[0]
-        tile.trailing = ft.Text(status.value, size=12)
+        tile.trailing = ft.Text(str(status), size=12)
         if subtitle is not None:
             tile.subtitle = ft.Text(subtitle, size=13)
         if file_path is not None and isinstance(card.data, dict):
             card.data["file_path"] = file_path
-        status_text.value = f"Статус: {status.value}"
+        status_text.value = f"Статус: {status}"
         page.update()
+
+    def restore_active_session() -> None:
+        session: LessonSession | None = page.app_state.active
+        if session is None:
+            return
+        if _find_card(session.id) is not None:
+            return
+        event = LessonGenerateEvent(
+            file_path=session.file_path,
+            teacher_description=session.teacher_description,
+            materials=session.materials,
+            status=session.status,
+            plan=session.plan,
+        )
+        path_text = str(session.file_path)
+        subtitle = (
+            path_text if session.status is LessonStatus.READY else event.subtitle
+        )
+        cards_list.controls.append(
+            _make_card(
+                session.id,
+                event.title,
+                subtitle,
+                session.status,
+                file_path=path_text,
+            )
+        )
+        status_text.value = f"Статус: {session.status}"
+        _sync_actions(session.status)
 
     def on_lesson_generate(event: LessonGenerateEvent) -> bool:
         title = (event.title or "").strip()
@@ -177,7 +198,7 @@ def build_management_control(
             plan=event.plan,
             status=status,
         )
-        status_text.value = f"Статус: {status.value}"
+        status_text.value = f"Статус: {status}"
         page.update()
         return True
 
@@ -226,4 +247,10 @@ def build_management_control(
         ],
     )
     _sync_actions(None)
-    return panel, on_lesson_generate, on_lesson_ready, on_lesson_failed
+    return ManagementControl(
+        panel=panel,
+        on_lesson_generate=on_lesson_generate,
+        on_lesson_ready=on_lesson_ready,
+        on_lesson_failed=on_lesson_failed,
+        restore_active_session=restore_active_session,
+    )

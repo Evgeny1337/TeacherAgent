@@ -1,5 +1,8 @@
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
+from flet import Column
 from pydantic import BaseModel, Field
 
 from plan.schemas.plan_shema import LessonPlan
@@ -32,3 +35,14 @@ class LessonGenerateEvent(BaseModel):
 
 class HistoryEntryEvent(BaseModel):
     text: str
+
+
+@dataclass(slots=True)
+class ManagementControl:
+    """UI wiring for the result panel — not a serializable DTO."""
+
+    panel: Column
+    on_lesson_generate: Callable[[LessonGenerateEvent], bool]
+    on_lesson_ready: Callable[[LessonGenerateEvent], bool]
+    on_lesson_failed: Callable[[LessonGenerateEvent, Exception], bool]
+    restore_active_session: Callable[[], None]
