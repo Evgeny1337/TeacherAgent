@@ -8,6 +8,7 @@ from layout_utils import actions_bar
 from pipeline import create_file_name, run_generate_lesson, run_revise_lesson
 from schemas.lesson_session import LessonStatus
 from schemas.ui_events import LessonGenerateEvent
+from session_store import clear as clear_session
 
 _FILES_LIST_HEIGHT = 96
 
@@ -51,6 +52,7 @@ def build_input_control(
 
     def _reset_input() -> None:
         page.app_state.active = None
+        clear_session()
         description.value = ""
         selected_paths.clear()
         _refresh_files_view()

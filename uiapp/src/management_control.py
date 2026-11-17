@@ -5,6 +5,8 @@ import flet as ft
 from layout_utils import actions_bar
 from schemas.lesson_session import LessonSession, LessonStatus
 from schemas.ui_events import LessonGenerateEvent, ManagementControl
+from session_store import clear as clear_session
+from session_store import save as save_session
 
 
 def build_management_control(page: ft.Page) -> ManagementControl:
@@ -28,6 +30,7 @@ def build_management_control(page: ft.Page) -> ManagementControl:
             file_path=str(path),
         )
         page.app_state.active = None
+        clear_session()
         _sync_actions(None)
         return True
 
@@ -175,6 +178,7 @@ def build_management_control(page: ft.Page) -> ManagementControl:
                 return False
             session.status = status
             session.revision_notes = event.teacher_description
+            save_session(session)
             card = _find_card(event.card_id)
             if card is not None:
                 _update_card(card, status)
@@ -190,7 +194,7 @@ def build_management_control(page: ft.Page) -> ManagementControl:
                 status,
             )
         )
-        page.app_state.active = LessonSession(
+        session = LessonSession(
             id=event.card_id,
             file_path=event.file_path,
             teacher_description=event.teacher_description,
@@ -198,6 +202,8 @@ def build_management_control(page: ft.Page) -> ManagementControl:
             plan=event.plan,
             status=status,
         )
+        page.app_state.active = session
+        save_session(session)
         status_text.value = f"Статус: {status}"
         page.update()
         return True
@@ -212,6 +218,7 @@ def build_management_control(page: ft.Page) -> ManagementControl:
             session.plan = event.plan
             session.status = status
             session.file_path = event.file_path
+            save_session(session)
         card = _find_card(event.card_id)
         if card is None:
             return False
@@ -225,6 +232,7 @@ def build_management_control(page: ft.Page) -> ManagementControl:
         session = page.app_state.active
         if session and session.id == event.card_id:
             session.status = status
+            save_session(session)
         card = _find_card(event.card_id)
         if card is None:
             return False
