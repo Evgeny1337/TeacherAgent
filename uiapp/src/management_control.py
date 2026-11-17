@@ -18,8 +18,6 @@ def build_management_control(
     cards_list = ft.ListView(expand=True, spacing=8, auto_scroll=True)
     status_text = ft.Text("Статус: —", size=13)
 
-
-
     def on_confirm(e: ft.Event[ft.Button]):
         session = page.app_state.active
         if session is None or session.status != LessonStatus.READY:
@@ -36,37 +34,51 @@ def build_management_control(
     def on_confirm_own_file(e: ft.Event[ft.Button]):
         pass
 
-    def on_send_revise(e: ft.Event[ft.Button]):
-        pass
-
     confirm_btn = ft.Button("Подтвердить", on_click=on_confirm, disabled=True)
-    revise_btn = ft.OutlinedButton("На доработку", on_click=on_send_revise, disabled=True)
-    own_confirm_btn = ft.OutlinedButton("Свой файл", on_click=on_confirm_own_file, disabled=True)
+    own_confirm_btn = ft.OutlinedButton(
+        "Свой файл", on_click=on_confirm_own_file, disabled=True
+    )
 
     def _sync_actions(status: LessonStatus | None) -> None:
-        generate_btn = getattr(page, "generate_btn", None)
-        if status is None:
-            confirm_btn.disabled = True
-            revise_btn.disabled = True
-            own_confirm_btn.disabled = False
-            if generate_btn is not None:
-                generate_btn.disabled = False
-            page.update()
-            return
-
+        ui = getattr(page, "ui", {}) or {}
+        idle = status is None
         busy = status in (LessonStatus.GENERATING, LessonStatus.REVISING)
         ready = status is LessonStatus.READY
-        confirm_btn.disabled = not ready
-        revise_btn.disabled = not ready
-        own_confirm_btn.disabled = busy
+        has_session = status is not None
+
+        description = ui.get("description")
+        if description is not None:
+            description.disabled = busy
+
+        for key in ("attach_btn", "clear_all_btn"):
+            control = ui.get(key)
+            if control is not None:
+                control.disabled = busy or has_session
+
+        generate_btn = ui.get("generate_btn")
+        revise_btn = ui.get("revise_btn")
+        new_btn = ui.get("new_btn")
         if generate_btn is not None:
-            generate_btn.disabled = busy or ready
+            generate_btn.visible = idle
+            generate_btn.disabled = False
+        if revise_btn is not None:
+            revise_btn.visible = has_session
+            revise_btn.disabled = not ready
+        if new_btn is not None:
+            new_btn.visible = has_session
+            new_btn.disabled = busy
+
+        refresh_files = ui.get("refresh_files")
+        if callable(refresh_files):
+            refresh_files()
+
+        confirm_btn.disabled = not ready
+        own_confirm_btn.disabled = busy
         page.update()
 
     page.sync_actions = _sync_actions
 
     def _make_card(
-        *,
         card_id: str,
         title: str,
         subtitle: str,
@@ -104,7 +116,6 @@ def build_management_control(
     def _update_card(
         card: ft.Card,
         status: LessonStatus,
-        *,
         subtitle: str | None = None,
         file_path: str | None = None,
     ) -> None:
@@ -125,10 +136,10 @@ def build_management_control(
         _sync_actions(status)
         cards_list.controls.append(
             _make_card(
-                card_id=event.card_id,
-                title=title,
-                subtitle=event.subtitle,
-                status=status,
+                event.card_id,
+                title,
+                event.subtitle,
+                status,
             )
         )
         page.app_state.active = LessonSession(
@@ -184,11 +195,7 @@ def build_management_control(
             ft.Text("Результат / превью", weight=ft.FontWeight.BOLD),
             status_text,
             cards_list,
-            actions_bar(
-                confirm_btn,
-                own_confirm_btn,
-                revise_btn,
-            ),
+            actions_bar(confirm_btn, own_confirm_btn),
         ],
     )
     _sync_actions(None)

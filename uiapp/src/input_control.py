@@ -35,6 +35,9 @@ def build_input_control(
 
     def _remove_file(path: Path):
         def handler(e: ft.Event[ft.IconButton]):
+            session = page.app_state.active
+            if session is not None:
+                return
             if path not in selected_paths:
                 return
             selected_paths.remove(path)
@@ -44,6 +47,8 @@ def build_input_control(
         return handler
 
     def _clear_all(e: ft.Event[ft.TextButton]):
+        if page.app_state.active is not None:
+            return
         selected_paths.clear()
         _refresh_files_view()
         page.update()
@@ -63,6 +68,7 @@ def build_input_control(
         )
 
     def _file_row(path: Path) -> ft.Control:
+        locked = page.app_state.active is not None
         return ft.Container(
             padding=ft.Padding.symmetric(horizontal=8, vertical=4),
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
@@ -84,6 +90,7 @@ def build_input_control(
                         icon=ft.Icons.CLOSE,
                         icon_size=16,
                         tooltip="Открепить",
+                        disabled=locked,
                         on_click=_remove_file(path),
                     ),
                 ],
@@ -101,7 +108,6 @@ def build_input_control(
         files_count.value = f"{count} файл(ов)"
         clear_all_btn.visible = True
         files_list.controls = [_file_row(path) for path in selected_paths]
-
 
     files_box = ft.Container(
         height=_FILES_LIST_HEIGHT + 48,
@@ -135,6 +141,8 @@ def build_input_control(
     )
 
     async def on_pick_files(e: ft.Event[ft.Button]):
+        if page.app_state.active is not None:
+            return
         files = await file_picker.pick_files(
             allow_multiple=True,
             file_type=ft.FilePickerFileType.CUSTOM,
@@ -152,20 +160,8 @@ def build_input_control(
         page.update()
 
     async def on_send_request(e: ft.Event[ft.Button]):
-        session = page.app_state.active
-        if session is not None and session.status in (
-            LessonStatus.GENERATING,
-            LessonStatus.REVISING,
-            LessonStatus.READY,
-        ):
-            if session.status is LessonStatus.READY:
-                page.show_dialog(
-                    ft.SnackBar(
-                        ft.Text("Сначала подтвердите текущий урок")
-                    )
-                )
+        if page.app_state.active is not None:
             return
-
         file_name = create_file_name()
         event = LessonGenerateEvent(
             file_path=file_name,
@@ -192,10 +188,50 @@ def build_input_control(
             )
         page.update()
 
+    def on_revise(e: ft.Event[ft.Button]):
+        session = page.app_state.active
+        if session is None or session.status is not LessonStatus.READY:
+            return
+        notes = (description.value or "").strip()
+        if not notes:
+            page.show_dialog(ft.SnackBar(ft.Text("Опишите, что доработать")))
+            return
+        session.revision_notes = notes
+        page.show_dialog(
+            ft.SnackBar(ft.Text("Доработка будет подключена позже"))
+        )
+
+    def on_new_request(e: ft.Event[ft.Button]):
+        page.app_state.active = None
+        description.value = ""
+        selected_paths.clear()
+        _refresh_files_view()
+        sync = getattr(page, "sync_actions", None)
+        if sync is not None:
+            sync(None)
+        else:
+            page.update()
+
     _refresh_files_view()
 
+    attach_btn = ft.OutlinedButton("Прикрепить", on_click=on_pick_files)
     generate_btn = ft.Button("Сгенерировать", on_click=on_send_request)
-    page.generate_btn = generate_btn
+    revise_btn = ft.OutlinedButton(
+        "На доработку", on_click=on_revise, visible=False
+    )
+    new_btn = ft.OutlinedButton(
+        "Новый запрос", on_click=on_new_request, visible=False
+    )
+
+    page.ui = {
+        "description": description,
+        "attach_btn": attach_btn,
+        "clear_all_btn": clear_all_btn,
+        "generate_btn": generate_btn,
+        "revise_btn": revise_btn,
+        "new_btn": new_btn,
+        "refresh_files": _refresh_files_view,
+    }
     sync_actions = getattr(page, "sync_actions", None)
     if sync_actions is not None:
         active = page.app_state.active
@@ -209,9 +245,6 @@ def build_input_control(
             ft.Text("Вход", weight=ft.FontWeight.BOLD),
             ft.Container(expand=True, content=description),
             files_box,
-            actions_bar(
-                ft.OutlinedButton("Прикрепить", on_click=on_pick_files),
-                generate_btn,
-            ),
+            actions_bar(attach_btn, generate_btn, revise_btn, new_btn),
         ],
     )
