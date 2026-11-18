@@ -116,19 +116,44 @@ def apply_patch(plan: LessonPlan, patch: LessonPlanPatch) -> LessonPlan:
             raise ValueError(f"stages.{key} out of range")
         data["stages"][idx] = row
 
-    if raw.get("handouts"):
+    handout_rows = raw.pop("handouts", None)
+    if handout_rows:
         handouts = list(data.get("handouts") or [])
-        for key, row in raw["handouts"].items():
+        for key, row in sorted(handout_rows.items(), key=lambda item: int(item[0])):
             idx = int(key)
-            if not 0 <= idx < len(handouts):
-                raise ValueError(f"handouts.{key} out of range")
-            handouts[idx] = row
+            if idx < len(handouts):
+                handouts[idx] = row
+            else:
+                handouts.append(row)
         data["handouts"] = handouts
 
     if "worksheet" in raw:
         data["worksheet"] = raw["worksheet"]
 
     return LessonPlan.model_validate(data)
+
+
+def _normalize_route(plan: LessonPlan, route: ReviseRoute) -> ReviseRoute:
+    handouts_len = len(plan.handouts or [])
+    stages_len = len(plan.stages)
+    targets: list[str] = []
+
+    for target in route.targets:
+        if (idx := _parse_index(target, "handouts.")) is not None:
+            if idx < handouts_len:
+                targets.append(target)
+            elif plan.worksheet is None:
+                targets.append("worksheet")
+            continue
+
+        if (idx := _parse_index(target, "stages.")) is not None:
+            if idx < stages_len:
+                targets.append(target)
+            continue
+
+        targets.append(target)
+
+    return route.model_copy(update={"targets": list(dict.fromkeys(targets))})
 
 
 def _needs_patch(route: ReviseRoute) -> bool:
@@ -213,7 +238,10 @@ def revise_lesson_plan(
     materials: str = "",
     format_preferences: str = "none",
 ) -> LessonPlan:
-    route = _route_plan(api_key, previous_plan, revision_notes)
+    route = _normalize_route(
+        previous_plan,
+        _route_plan(api_key, previous_plan, revision_notes),
+    )
     use_full = route.scope is ReviseScope.FULL or (
         not route.set and not route.targets
     )

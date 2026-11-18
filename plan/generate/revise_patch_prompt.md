@@ -39,6 +39,8 @@ Field rules:
 - Include only keys you actually change
 - set: scalar header fields, e.g. {"lesson.level":"B1", "lesson.aim":"..."}
 - stages / handouts: object keyed by string index; value is the FULL replacement object for that item
+- handouts indexes MUST match fragments / existing items (or omit handouts and use worksheet for homework)
+- Homework / домашнее задание → put content in "worksheet" (full object), even if fragments.worksheet is null. Do NOT put homework into handouts.<i>
 - worksheet: full replacement object, or null only if teacher asked to remove homework sheet
 - If a target is stages.<i>.procedure only, you may still return the full stage object under stages.<i> (keep title/time unless notes change them)
 - Empty sections may be omitted or use {}

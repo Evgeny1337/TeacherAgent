@@ -35,7 +35,10 @@ Allowed target paths (use these exact forms):
 - worksheet.body
 
 Rules:
-- Indexes are 0-based and must exist in outline
+- Indexes are 0-based and MUST already exist in outline (never invent handouts.5 / stages.9 if outline has fewer items)
+- Homework / домашнее задание / worksheet requests → target "worksheet" (create or update). Do NOT invent a new handouts.<i> for homework
+- If outline.worksheet is null and notes ask for homework, still use target "worksheet"
+- Class materials only → handouts.<i> with an index that exists in outline
 - If notes only change a header scalar (level/date/teacher) and do not ask to rewrite content, prefer local targets + optional set values
 - If notes name a stage by number/title, target that stage (prefer stages.<i> or stages.<i>.procedure)
 - If notes are vague or touch most of the lesson, use scope "full" and targets []
