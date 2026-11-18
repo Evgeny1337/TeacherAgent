@@ -2,10 +2,14 @@
 
 ## Pending
 
-- [ ] **Хрупкость ответа модели**  
-  Pydantic жёстко валидирует enum’ы (`cefr_level`, `lesson_type`, `readiness`).  
+- [x] **Retry при невалидном JSON от модели**  
+  В `chat_json`: до 3 попыток, при `ValidationError` — повторный запрос с ошибками + schema.  
+  Покрывает generate / router / patch / full.
+
+- [ ] **Хрупкость brief/enum’ов**  
+  Pydantic жёстко валидирует enum’ы (`cefr_level`, `lesson_type`, `readiness`) в intake.  
   Любой `"B1.2"` / `"Grammar"` / неожиданный формат → `ValidationError`.  
-  Сделать позже: retry / нормализация / более мягкий parse.
+  Сделать позже: нормализация / более мягкий parse в `fetch_lesson_info`.
 
 - [ ] **Один OpenAI-клиент**  
   Сейчас `OpenAI(...)` создаётся на каждый вызов в `fetch_lesson_info`.  

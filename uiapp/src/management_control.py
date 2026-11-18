@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import flet as ft
+from pydantic.color import Color
 
 from layout_utils import actions_bar
 from schemas.lesson_session import LessonSession, LessonStatus
@@ -94,8 +95,11 @@ def build_management_control(page: ft.Page) -> ManagementControl:
         status: LessonStatus,
         file_path: str | None = None,
     ) -> ft.Card:
+        for card in cards_list.controls:
+            card.bgcolor = None
         return ft.Card(
             data={"card_id": card_id, "file_path": file_path},
+            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
             content=ft.Container(
                 padding=10,
                 content=ft.Column(
