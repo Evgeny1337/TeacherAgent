@@ -39,8 +39,6 @@ class HistoryEntryEvent(BaseModel):
 
 @dataclass(slots=True)
 class ManagementControl:
-    """UI wiring for the result panel — not a serializable DTO."""
-
     panel: Column
     on_lesson_generate: Callable[[LessonGenerateEvent], bool]
     on_lesson_ready: Callable[[LessonGenerateEvent], bool]

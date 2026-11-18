@@ -23,11 +23,9 @@
 
 ## Локальный продукт (можно делать без сервера)
 
-- [ ] **Частичный revise**  
-  Сейчас revise шлёт весь `previous_plan` и просит полный JSON обратно.  
-  Цель: менять отдельные поля `LessonPlan` (stage / aim / worksheet…) → меньше токенов.  
-  Вариант A: учитель/эвристика указывает target fields → патч → merge.  
-  Вариант B: маленький роутер «что трогать» → затем A. Полный revise оставить запасной кнопкой.
+- [x] **Частичный revise**  
+  Router (`REVISE_ROUTER_PROMPT`) → optional patch (`REVISE_PATCH_PROMPT`) → merge.  
+  Full revise — fallback при `scope=full` / пустом `set`. Без regex-эвристик.
 
 - [ ] **`format_preferences` в UI**  
   Сейчас всегда `"none"` в пайплайне. Вынести выбор вёрстки в интерфейс **только если** учителю реально нужна смена формата; иначе оставить `"none"`.
