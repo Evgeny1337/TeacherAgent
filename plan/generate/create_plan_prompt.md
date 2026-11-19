@@ -6,11 +6,15 @@ You receive:
 3) lesson_brief — LessonInfoResponse JSON
 4) teacher_overrides — date and teacher name
 5) materials — extracted text chunks from attached files (optional)
+6) example_lesson_plans — optional approved LessonPlan JSON examples from similar past lessons
 
 Your job:
 - Produce one complete lesson plan as JSON only
 - Follow teacher_description for pedagogical intent (level, time, focus, interaction, homework style)
 - Follow lesson_brief for goal/topic/level/duration/language_focus when available
+- If example_lesson_plans is provided, use them as style/structure references (stage flow, timing density, procedure tone, handout layout)
+- Do NOT copy topics, dates, names, or exercises verbatim from examples unless they fit teacher_description and materials
+- Prefer teacher_description + lesson_brief + materials over examples when they conflict
 - Use materials as evidence; do not invent exercises that contradict them
 - If materials contain usable tasks, turn them into class handouts and/or homework worksheet and reference them from stages
 - Write stage.procedure so a teacher can run the lesson (clear steps, examples, ICQs when useful)

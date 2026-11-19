@@ -10,6 +10,8 @@ load_dotenv()
 
 API_KEY = os.environ.get("API_KEY", "")
 LESSON_DIR = os.environ.get("LESSON_DIR", "./")
+RAG_URL = os.environ.get("RAG_URL", "")
+
 
 
 def materials_text(materials: list[Path]) -> str:

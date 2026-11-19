@@ -2,6 +2,7 @@ from plan.generate.llm import SYSTEM_PROMPT, chat_json
 from plan.generate.revise import revise_lesson_plan
 from plan.schemas.plan_shema import LessonPlan
 
+
 __all__ = ["generate_lesson_plan", "revise_lesson_plan"]
 
 
@@ -13,6 +14,7 @@ def generate_lesson_plan(
     lesson_date: str,
     teacher_description: str,
     format_preferences: str = "none",
+    similar_plans: str | None = None,
 ) -> LessonPlan:
     user_prompt = (
         "Build the lesson plan JSON.\n\n"
@@ -22,6 +24,8 @@ def generate_lesson_plan(
         f"lesson_brief:\n{lesson_brief}\n\n"
         f"materials:\n{materials or 'None'}\n"
     )
+    if similar_plans:
+        user_prompt += f"{similar_plans}\n"
     return chat_json(
         api_key,
         user_prompt,

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from intake.llm.fetch_lesson_info import fetch_lesson_info
 from plan.generate.generate_plan import generate_lesson_plan
+from plan.rag import fetch_similar_plans
 from plan.recordWord.record_word import record_lesson_plan_to_word
 from plan.schemas.plan_shema import LessonPlan
 from pipeline.common import API_KEY, LESSON_DIR, materials_text
@@ -33,6 +34,7 @@ def run_generate_lesson(
         teacher_description=teacher_description,
         api_key=API_KEY,
     )
+    similar_plans = fetch_similar_plans(lesson_info)
     plan = generate_lesson_plan(
         lesson_brief=lesson_info.model_dump_json(),
         teacher="MaryA",
@@ -41,6 +43,7 @@ def run_generate_lesson(
         teacher_description=teacher_description,
         format_preferences=format_preferences,
         api_key=API_KEY,
+        similar_plans=similar_plans or None,
     )
     record_lesson_plan_to_word(plan, file_name)
     return plan
