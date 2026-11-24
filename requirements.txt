@@ -28,11 +28,6 @@ docxtpl==0.20.2
 et_xmlfile==2.0.0
 fastapi==0.162.5
 flatbuffers==25.12.19
-flet==1.1.2
-flet-cli==1.1.2
-flet-desktop==1.1.2
-flet-platform-assets==1.1.2
-flet-web==1.1.2
 h11==0.16.0
 html5lib==1.1
 htmldocx==0.0.6

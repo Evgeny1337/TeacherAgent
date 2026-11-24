@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -6,10 +7,25 @@ from dotenv import load_dotenv
 from intake.chunking.chunk_markdown import get_text_chunks
 from intake.extract.to_markdown import extract_files
 
-load_dotenv()
+
+def _load_env() -> None:
+    if getattr(sys, "frozen", False) and getattr(sys, "_MEIPASS", None):
+        load_dotenv(Path(sys._MEIPASS) / ".env", override=False)
+    load_dotenv(override=False)
+
+
+_load_env()
+
+
+def _default_lesson_dir() -> str:
+    desktop = Path.home() / "Desktop"
+    if desktop.is_dir():
+        return str(desktop)
+    return str(Path.home())
+
 
 API_KEY = os.environ.get("API_KEY", "")
-LESSON_DIR = os.environ.get("LESSON_DIR", "./")
+LESSON_DIR = os.environ.get("LESSON_DIR") or _default_lesson_dir()
 RAG_URL = os.environ.get("RAG_URL", "")
 
 

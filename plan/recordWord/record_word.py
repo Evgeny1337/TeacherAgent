@@ -1,19 +1,28 @@
-import os
+import sys
 import tempfile
 from pathlib import Path
 
 from docxtpl import DocxTemplate
-from dotenv import load_dotenv
 from mddocx import render_string, RenderConfig
 
 from plan.schemas.plan_shema import LessonPlan
 
-load_dotenv()
 
-LESSON_DIR = os.getenv("LESSON_DIR", "./")
-_TEMPLATE_PATH = (
-    Path(__file__).resolve().parents[2] / "templates" / "lesson" / "lesson_plan.docx"
-)
+def _template_path() -> Path:
+    if getattr(sys, "frozen", False) and getattr(sys, "_MEIPASS", None):
+        return Path(sys._MEIPASS) / "templates" / "lesson" / "lesson_plan.docx"
+    beside = Path(__file__).resolve().parent / "lesson_plan.docx"
+    if beside.is_file():
+        return beside
+    return (
+        Path(__file__).resolve().parents[2]
+        / "templates"
+        / "lesson"
+        / "lesson_plan.docx"
+    )
+
+
+_TEMPLATE_PATH = _template_path()
 
 
 def convert_md(doc: DocxTemplate, md_text: str):

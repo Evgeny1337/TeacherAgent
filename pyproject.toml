@@ -10,3 +10,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["pipeline*", "intake*", "plan*"]
+
+# .md и шаблон docx должны попадать в wheel при pip install.
+[tool.setuptools.package-data]
+intake = ["llm/*.md"]
+plan = ["generate/*.md", "recordWord/*.docx"]
+
+[tool.setuptools]
+include-package-data = true
