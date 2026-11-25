@@ -1,22 +1,39 @@
-import os
-
 import httpx
-from dotenv import load_dotenv
 
 from intake.schemas.lesson_info_response import LessonInfoResponse
+from pipeline.common import (
+    RAG_PATH_HISTORY,
+    RAG_PATH_LESSON_DATA,
+    RAG_PATH_SAVE,
+    RAG_PATH_SIMILAR,
+    RAG_URL,
+    rag_endpoint,
+)
 from plan.rag.embed_text import build_embed_text_from_brief, plans_to_prompt_block
 from plan.rag.schemas import PlansResponseSchema
 
-load_dotenv()
+
+def fetch_history(*, timeout: float = 15.0) -> list[dict]:
+    response = httpx.get(rag_endpoint(RAG_PATH_HISTORY), timeout=timeout)
+    response.raise_for_status()
+    rows = response.json()
+    if not isinstance(rows, list):
+        raise ValueError("Некорректный ответ history")
+    return rows
 
 
-def _rag_base() -> str:
-    return os.environ.get("RAG_URL", "http://localhost:8003").rstrip("/")
+def save_lesson(payload: dict, *, timeout: float = 30.0) -> None:
+    response = httpx.post(
+        rag_endpoint(RAG_PATH_SAVE),
+        json=payload,
+        timeout=timeout,
+    )
+    response.raise_for_status()
 
 
 def fetch_lesson_data(lesson_id: int, *, timeout: float = 30.0) -> dict:
     response = httpx.get(
-        f"{_rag_base()}/api/teacher/{lesson_id}/data/",
+        rag_endpoint(RAG_PATH_LESSON_DATA, lesson_id=lesson_id),
         timeout=timeout,
     )
     response.raise_for_status()
@@ -32,8 +49,7 @@ def fetch_similar_plans(
     limit: int = 3,
     timeout: float = 30.0,
 ) -> str:
-    rag_url = os.environ.get("RAG_URL", "").rstrip("/")
-    if not rag_url:
+    if not RAG_URL:
         return ""
 
     embed_text = build_embed_text_from_brief(lesson_info)
@@ -51,7 +67,7 @@ def fetch_similar_plans(
 
     try:
         response = httpx.post(
-            f"{rag_url}/api/teacher/similar",
+            rag_endpoint(RAG_PATH_SIMILAR),
             json=body,
             timeout=timeout,
         )

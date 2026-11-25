@@ -26,7 +26,19 @@ def _default_lesson_dir() -> str:
 
 API_KEY = os.environ.get("API_KEY", "")
 LESSON_DIR = os.environ.get("LESSON_DIR") or _default_lesson_dir()
-RAG_URL = os.environ.get("RAG_URL", "")
+RAG_URL = os.environ.get("RAG_URL", "").rstrip("/")
+RAG_PATH_SAVE = os.environ.get("RAG_PATH_SAVE", "/api/teacher/")
+RAG_PATH_SIMILAR = os.environ.get("RAG_PATH_SIMILAR", "/api/teacher/similar")
+RAG_PATH_HISTORY = os.environ.get("RAG_PATH_HISTORY", "/api/teacher/history/")
+RAG_PATH_LESSON_DATA = os.environ.get(
+    "RAG_PATH_LESSON_DATA", "/api/teacher/{lesson_id}/data/"
+)
+
+
+def rag_endpoint(path: str, **kwargs) -> str:
+    if not RAG_URL:
+        raise ValueError("RAG_URL не задан в .env")
+    return f"{RAG_URL}/{path.format(**kwargs).lstrip('/')}"
 
 
 def rag_doc_path(lesson_id: int) -> Path:

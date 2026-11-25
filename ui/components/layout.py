@@ -1,23 +1,14 @@
-import os
-
-import httpx
-from dotenv import load_dotenv
 from nicegui import ui
 
+from plan.rag import fetch_history
 from ui.components.input_component import make_input_panel
 from ui.components.lessons_component import make_lessons_panel
 from ui.state.lesson_state import AppState
 
 
 def build_ui(state: AppState) -> None:
-    load_dotenv()
-    rag_url = os.environ.get("RAG_URL", "http://localhost:8003").rstrip("/")
     try:
-        response = httpx.get(f"{rag_url}/api/teacher/history/", timeout=15)
-        response.raise_for_status()
-        rows = response.json()
-        if isinstance(rows, list):
-            state.load_history(rows)
+        state.load_history(fetch_history())
     except Exception as exc:
         ui.notify(f"История недоступна: {exc}", type="warning")
 

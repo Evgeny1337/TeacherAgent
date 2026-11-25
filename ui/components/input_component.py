@@ -1,13 +1,12 @@
 import asyncio
-import os
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
-import httpx
 from nicegui import events, ui
 
 from pipeline import create_file_name, run_generate_lesson, run_revise_lesson
+from plan.rag import save_lesson
 from ui.state.lesson_state import AppState, LessonItem, LessonStatus
 
 _ALLOWED = {".docx", ".pdf", ".pptx"}
@@ -119,14 +118,7 @@ def make_input_panel(state: AppState, on_refresh: Callable[[], None]):
             ui.notify("Нет плана для апрува", type="warning")
             return
         try:
-            payload = lesson_item.get_plan_for_request()
-            rag_url = os.environ.get("RAG_URL", "http://localhost:8003").rstrip("/")
-            response = httpx.post(
-                f"{rag_url}/api/teacher/",
-                json=payload,
-                timeout=30,
-            )
-            response.raise_for_status()
+            save_lesson(lesson_item.get_plan_for_request())
         except Exception as exc:
             ui.notify(f"Апрув не удался: {exc}", type="negative")
             return
