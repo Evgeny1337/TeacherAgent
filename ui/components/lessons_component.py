@@ -3,7 +3,7 @@ from collections.abc import Callable
 
 from nicegui import ui
 
-from pipeline import rag_doc_path
+from pipeline.common import rag_doc_path
 from plan.rag import fetch_lesson_data
 from plan.recordWord.record_word import record_lesson_plan_to_word
 from plan.schemas.plan_shema import LessonPlan

@@ -5,7 +5,8 @@ from pathlib import Path
 
 from nicegui import events, ui
 
-from pipeline import create_file_name, run_generate_lesson, run_revise_lesson
+from pipeline.run_generate_lesson import create_file_name, run_generate_lesson
+from pipeline.run_revise_lesson import run_revise_lesson
 from plan.rag import save_lesson
 from ui.state.lesson_state import AppState, LessonItem, LessonStatus
 
