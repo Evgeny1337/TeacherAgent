@@ -46,7 +46,7 @@ def make_input_panel(state: AppState, on_refresh: Callable[[], None]):
             summary=(text[:80] + "…") if len(text) > 80 else (text or "Без описания"),
         )
         state.lessons.insert(0, item)
-        state.active_id = item.id
+        state.active_id = item.local_id
         state.busy = True
         with client:
             on_refresh()
@@ -130,41 +130,52 @@ def make_input_panel(state: AppState, on_refresh: Callable[[], None]):
         except Exception as exc:
             ui.notify(f"Апрув не удался: {exc}", type="negative")
             return
+        lesson_item.mark_approved()
         ui.notify("Урок принят", type="positive")
         new_dialog()
 
     @ui.refreshable
     def panel() -> None:
         active = state.active
+        approved = active is not None and active.is_approved
         ready = (
             active is not None
             and active.status == LessonStatus.GENERATED
             and not state.busy
+            and not approved
         )
 
         ui.label("Диалог урока").classes("text-h6")
-        description_box["el"] = (
+        textarea = (
             ui.textarea(
                 label="Описание / замечания",
                 placeholder="Тема, уровень, что учесть…",
-                value=active.description if active and ready else "",
+                value=(
+                    active.description
+                    if active and (ready or approved)
+                    else ""
+                ),
             )
             .classes("w-full")
             .props("outlined autogrow")
         )
+        description_box["el"] = textarea
+        if approved:
+            textarea.props("readonly")
 
-        ui.upload(
-            label="Прикрепить файлы",
-            multiple=True,
-            auto_upload=True,
-            on_upload=on_upload,
-        ).props("accept=.docx,.pdf,.pptx").classes("w-full")
+        if not approved:
+            ui.upload(
+                label="Прикрепить файлы",
+                multiple=True,
+                auto_upload=True,
+                on_upload=on_upload,
+            ).props("accept=.docx,.pdf,.pptx").classes("w-full")
 
-        if state.draft_paths:
-            for path in state.draft_paths:
-                ui.label(f"• {path.name}").classes("text-sm")
-        else:
-            ui.label("Файлы не выбраны").classes("text-caption text-grey-6")
+            if state.draft_paths:
+                for path in state.draft_paths:
+                    ui.label(f"• {path.name}").classes("text-sm")
+            else:
+                ui.label("Файлы не выбраны").classes("text-caption text-grey-6")
 
         if state.busy:
             with ui.row().classes("items-center gap-2"):
@@ -175,6 +186,9 @@ def make_input_panel(state: AppState, on_refresh: Callable[[], None]):
             if ready:
                 ui.button("Апрув", on_click=approve).props("color=positive")
                 ui.button("На доработку", on_click=revise).props("outline")
+                ui.button("Новый диалог", on_click=new_dialog).props("flat")
+            elif approved:
+                ui.label("Урок уже в истории").classes("text-caption text-grey-7")
                 ui.button("Новый диалог", on_click=new_dialog).props("flat")
             else:
                 btn = ui.button("Сгенерировать", on_click=generate).props(

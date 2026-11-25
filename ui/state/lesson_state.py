@@ -12,12 +12,16 @@ _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 class LessonStatus(str, Enum):
     CREATING = "Создание"
     GENERATED = "Сгенерирован"
+    APPROVED = "Подтверждён"
+    READY = "Документ готов"
     ERROR = "Ошибка"
 
 
 @dataclass
 class LessonItem:
-    id: str = field(default_factory=lambda: uuid4().hex[:8])
+    # RAG/DB id; None until урок сохранён в TeacherRag
+    id: int | None = None
+    local_id: str = field(default_factory=lambda: uuid4().hex[:8])
     description: str = ""
     status: LessonStatus = LessonStatus.CREATING
     summary: str = ""
@@ -26,6 +30,51 @@ class LessonItem:
     error: str | None = None
     materials: list[Path] = field(default_factory=list)
 
+    @property
+    def is_approved(self) -> bool:
+        return self.id is not None or self.status in (
+            LessonStatus.APPROVED,
+            LessonStatus.READY,
+        )
+
+    @property
+    def can_open(self) -> bool:
+        return self.file_path is not None and self.file_path.is_file()
+
+    @property
+    def can_materialize(self) -> bool:
+        return self.id is not None and not self.can_open
+
+    @classmethod
+    def from_history(cls, row: dict) -> "LessonItem":
+        remote_id = row.get("id")
+        topic = (row.get("topic") or "").strip()
+        aim = (row.get("aim") or "").strip()
+        return cls(
+            id=int(remote_id) if remote_id is not None else None,
+            local_id=str(remote_id) if remote_id is not None else uuid4().hex[:8],
+            description=topic,
+            summary=aim or topic or "Урок из истории",
+            status=LessonStatus.APPROVED,
+        )
+
+    def apply_remote_data(self, data: dict, path: Path) -> None:
+        plan_json = data.get("plan_json")
+        if not isinstance(plan_json, dict):
+            raise ValueError("В ответе нет plan_json")
+        plan = LessonPlan.model_validate(plan_json)
+        self.plan = plan
+        self.file_path = path
+        self.error = None
+        if data.get("id") is not None:
+            self.id = int(data["id"])
+        topic = (data.get("topic") or "").strip()
+        aim = (data.get("aim") or plan.lesson.aim or "").strip()
+        if topic:
+            self.description = topic
+        self.summary = aim or topic or self.summary or "Урок готов"
+        self.status = LessonStatus.READY
+
     def set_plan(self, plan: LessonPlan, path: Path) -> None:
         self.plan = plan
         self.file_path = path
@@ -33,6 +82,13 @@ class LessonItem:
         self.error = None
         parts = [plan.lesson.level.strip(), plan.lesson.aim.strip()]
         self.summary = " · ".join(p for p in parts if p) or "Урок готов"
+
+    def mark_approved(self, remote_id: int | None = None) -> None:
+        if remote_id is not None:
+            self.id = int(remote_id)
+        self.status = (
+            LessonStatus.READY if self.can_open else LessonStatus.APPROVED
+        )
 
     def set_error(self, message: str) -> None:
         self.status = LessonStatus.ERROR
@@ -58,6 +114,7 @@ class LessonItem:
             "embed_text": (
                 f"level: {header.level} | aim: {header.aim} | {header.sub_aim}"
             ),
+            "is_reference": False,
         }
 
 
@@ -70,7 +127,13 @@ class AppState:
 
     @property
     def active(self) -> LessonItem | None:
-        return next((x for x in self.lessons if x.id == self.active_id), None)
+        return next(
+            (x for x in self.lessons if x.local_id == self.active_id),
+            None,
+        )
+
+    def load_history(self, rows: list[dict]) -> None:
+        self.lessons = [LessonItem.from_history(row) for row in rows]
 
     def clear_draft(self) -> None:
         self.draft_paths.clear()

@@ -10,6 +10,22 @@ from plan.rag.schemas import PlansResponseSchema
 load_dotenv()
 
 
+def _rag_base() -> str:
+    return os.environ.get("RAG_URL", "http://localhost:8003").rstrip("/")
+
+
+def fetch_lesson_data(lesson_id: int, *, timeout: float = 30.0) -> dict:
+    response = httpx.get(
+        f"{_rag_base()}/api/teacher/{lesson_id}/data/",
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, dict):
+        raise ValueError("Некорректный ответ /data/")
+    return data
+
+
 def fetch_similar_plans(
     lesson_info: LessonInfoResponse,
     *,
