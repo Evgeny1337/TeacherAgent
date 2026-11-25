@@ -9,7 +9,7 @@ from plan.recordWord.record_word import record_lesson_plan_to_word
 
 
 def main():
-    file = Path(__file__).parent / "doc.docx"
+    file = Path(__file__).parent / "helpers" / "doc.docx"
     markdown_files = extract_files([file])
     files_chunks = []
     for markdown_file in markdown_files:
