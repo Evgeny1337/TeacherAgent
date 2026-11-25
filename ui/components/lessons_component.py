@@ -3,7 +3,7 @@ from collections.abc import Callable
 
 from nicegui import ui
 
-from pipeline import create_file_name
+from pipeline import rag_doc_path
 from plan.rag import fetch_lesson_data
 from plan.recordWord.record_word import record_lesson_plan_to_word
 from plan.schemas.plan_shema import LessonPlan
@@ -88,7 +88,7 @@ def make_lessons_panel(state: AppState, on_refresh: Callable[[], None]):
                                 data = await asyncio.to_thread(
                                     fetch_lesson_data, lesson.id
                                 )
-                                out = create_file_name()
+                                out = rag_doc_path(lesson.id)
                                 plan_json = data.get("plan_json")
                                 if not isinstance(plan_json, dict):
                                     raise ValueError("Нет plan_json в ответе")

@@ -4,6 +4,7 @@ from enum import Enum
 from pathlib import Path
 from uuid import uuid4
 
+from pipeline.common import rag_doc_path
 from plan.schemas.plan_shema import LessonPlan
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -50,12 +51,16 @@ class LessonItem:
         remote_id = row.get("id")
         topic = (row.get("topic") or "").strip()
         aim = (row.get("aim") or "").strip()
+        lesson_id = int(remote_id) if remote_id is not None else None
+        path = rag_doc_path(lesson_id) if lesson_id is not None else None
+        ready = path is not None and path.is_file()
         return cls(
-            id=int(remote_id) if remote_id is not None else None,
-            local_id=str(remote_id) if remote_id is not None else uuid4().hex[:8],
+            id=lesson_id,
+            local_id=str(lesson_id) if lesson_id is not None else uuid4().hex[:8],
             description=topic,
             summary=aim or topic or "Урок из истории",
-            status=LessonStatus.APPROVED,
+            file_path=path if ready else None,
+            status=LessonStatus.READY if ready else LessonStatus.APPROVED,
         )
 
     def apply_remote_data(self, data: dict, path: Path) -> None:

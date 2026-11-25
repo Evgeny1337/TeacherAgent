@@ -29,6 +29,10 @@ LESSON_DIR = os.environ.get("LESSON_DIR") or _default_lesson_dir()
 RAG_URL = os.environ.get("RAG_URL", "")
 
 
+def rag_doc_path(lesson_id: int) -> Path:
+    return Path(LESSON_DIR) / f"rag_{lesson_id}.docx"
+
+
 
 def materials_text(materials: list[Path]) -> str:
     if not materials:
