@@ -1,0 +1,63 @@
+name: BuildApp
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{secrets.SSH_PRIVATE_KEY}}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{secrets.SSH_HOST}} >> ~/.ssh/known_hosts
+      - name: Build
+        run: |
+          set -e
+          python -m venv env
+          source env/bin/activate
+          pip install -r requirements.txt
+          cat > .env << EOF
+          API_KEY=${{ secrets.API_KEY }}
+          RAG_URL=${{ secrets.RAG_URL }}
+          RAG_PATH_SAVE=/api/teacher/
+          RAG_PATH_SIMILAR=/api/teacher/similar
+          RAG_PATH_HISTORY=/api/teacher/history/
+          RAG_PATH_LESSON_DATA=/api/teacher/{lesson_id}/data/
+          EOF
+          SP="env/lib/python3.14/site-packages"
+          MAGIKA="$SP/magika"
+          nicegui-pack \
+            --name TeacherAgent \
+            --windowed \
+            --onedir \
+            --noconfirm \
+            --clean \
+            --add-data "intake/llm:intake/llm" \
+            --add-data "plan/generate:plan/generate" \
+            --add-data "plan/recordWord:plan/recordWord" \
+            --add-data "templates:templates" \
+            --add-data ".env:." \
+            --add-data "${MAGIKA}/models:magika/models" \
+            --add-data "${MAGIKA}/config:magika/config" \
+            --add-data "${SP}/latex2mathml/unimathsymbols.txt:latex2mathml" \
+            --add-data "${SP}/mddocx/math:mddocx/math" \
+            --add-data "${SP}/docxcompose/templates:docxcompose/templates" \
+            ui/app.py
+          cd dist
+          zip -r TeacherAgent.zip TeacherAgent.app
+          scp -i ~/.ssh/deploy_key TeacherAgent.zip \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/updates/
+  
+          
